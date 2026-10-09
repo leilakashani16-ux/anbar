@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Vazirmatn", Tahoma, "Segoe UI", sans-serif;
+  --color-desk: #e6dfd2;
+  --color-paper: #f4efe6;
+  --color-ink: #1c2430;
+  --color-muted: #5e6a72;
+  --color-navy: #1a3f66;
+  --color-copper: #b85c38;
+  --color-line: #e2d9cc;
+  --color-card: #fffcf7;
+  --color-field: #fff6dc;
+  --color-ok: #1f7a4d;
+  --color-ok-bg: #e5f5ec;
+  --color-warn: #8a5a12;
+  --color-warn-bg: #fff3d6;
+  --color-bad: #9b2335;
+  --color-bad-bg: #fde8eb;
+}
+
+@utility dock-pad {
+  padding-bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px));
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    margin: 0;
+    background: var(--color-desk);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  [data-sonner-toaster] {
+    font-family: var(--font-sans);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
