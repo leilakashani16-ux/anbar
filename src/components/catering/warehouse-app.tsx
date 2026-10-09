@@ -30,6 +30,14 @@ import {
   type RemainderType,
   type StockStatus,
 } from "@/lib/catering";
+import {
+  SignInButtons,
+  UserButton,
+} from "@/lib/auth/gates";
+import { useCurrentUser } from "@/lib/auth/use-current-user";
+
+/** فقط این ایمیل اجازه ثبت و ویرایش دارد */
+const OWNER_EMAIL = "leilakashani16@gmail.com";
 
 type TabId = "entry" | "prod" | "inv" | "staff" | "list";
 
@@ -89,6 +97,9 @@ export function WarehouseApp() {
               <h1 className="text-lg font-bold leading-tight">انبار کترینگ</h1>
               <p className="text-sm text-card/80">گردش مواد اولیه · نصب‌شونده روی اندروید</p>
             </div>
+            <div className="flex items-center gap-1 text-card">
+              <UserButton />
+            </div>
             <button
               type="button"
               className="grid size-11 place-items-center rounded-full bg-card/10"
@@ -121,12 +132,16 @@ export function WarehouseApp() {
               برای نصب روی اندروید، راهنما را باز کنید. داده روی همین گوشی می‌ماند.
             </button>
           ) : null}
-          {tab === "entry" ? <EntryPanel /> : null}
+          {tab === "entry" ? (
+            <OwnerGate title="ثبت ورود مواد">
+              <EntryPanel />
+            </OwnerGate>
+          ) : null}
           {tab === "prod" ? (
-            <>
+            <OwnerGate title="ثبت تولید">
               <ProdPanel />
               <ProductCatalog />
-            </>
+            </OwnerGate>
           ) : null}
           {tab === "inv" ? <InvPanel /> : null}
           {tab === "staff" ? <StaffPanel /> : null}
@@ -829,49 +844,51 @@ function InvPanel() {
           })}
         </ul>
       </Card>
-      <Card title={code ? `ویرایش ${code}` : "ماده یا موجودی جدید"}>
-        <form className="flex flex-col gap-3" onSubmit={submit}>
-          <Field label="نام ماده">
-            <input className={fieldClass} value={name} onChange={(event) => setName(event.target.value)} />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="واحد">
-              <input className={fieldClass} value={unit} onChange={(event) => setUnit(event.target.value)} />
+      <OwnerOnly>
+        <Card title={code ? `ویرایش ${code}` : "ماده یا موجودی جدید"}>
+          <form className="flex flex-col gap-3" onSubmit={submit}>
+            <Field label="نام ماده">
+              <input className={fieldClass} value={name} onChange={(event) => setName(event.target.value)} />
             </Field>
-            <Field label="موجودی اولیه">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="واحد">
+                <input className={fieldClass} value={unit} onChange={(event) => setUnit(event.target.value)} />
+              </Field>
+              <Field label="موجودی اولیه">
+                <input
+                  className={fieldClass}
+                  inputMode="decimal"
+                  value={qty}
+                  onChange={(event) => setQty(event.target.value)}
+                />
+              </Field>
+            </div>
+            <Field label="حداقل هشدار">
               <input
                 className={fieldClass}
                 inputMode="decimal"
-                value={qty}
-                onChange={(event) => setQty(event.target.value)}
+                value={min}
+                onChange={(event) => setMin(event.target.value)}
               />
             </Field>
-          </div>
-          <Field label="حداقل هشدار">
-            <input
-              className={fieldClass}
-              inputMode="decimal"
-              value={min}
-              onChange={(event) => setMin(event.target.value)}
-            />
-          </Field>
-          <Field label="توضیحات">
-            <input className={fieldClass} value={note} onChange={(event) => setNote(event.target.value)} />
-          </Field>
-          <div className={code ? "grid grid-cols-2 gap-2" : ""}>
-            {code ? (
-              <button
-                type="button"
-                className="h-12 rounded-xl bg-paper text-sm font-semibold text-ink ring-1 ring-line"
-                onClick={reset}
-              >
-                انصراف
-              </button>
-            ) : null}
-            <Submit>{code ? "ذخیره ویرایش" : "افزودن ماده"}</Submit>
-          </div>
-        </form>
-      </Card>
+            <Field label="توضیحات">
+              <input className={fieldClass} value={note} onChange={(event) => setNote(event.target.value)} />
+            </Field>
+            <div className={code ? "grid grid-cols-2 gap-2" : ""}>
+              {code ? (
+                <button
+                  type="button"
+                  className="h-12 rounded-xl bg-paper text-sm font-semibold text-ink ring-1 ring-line"
+                  onClick={reset}
+                >
+                  انصراف
+                </button>
+              ) : null}
+              <Submit>{code ? "ذخیره ویرایش" : "افزودن ماده"}</Submit>
+            </div>
+          </form>
+        </Card>
+      </OwnerOnly>
       {pending ? (
         <Confirm
           title="حذف ماده"
@@ -932,45 +949,49 @@ function StaffPanel() {
                     {member.role || "بدون سمت"} · {member.code}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="grid size-11 shrink-0 place-items-center rounded-xl text-bad"
-                  aria-label={`حذف ${member.name}`}
-                  onClick={() => setPending(member.code)}
-                >
-                  <Trash2 className="size-5" />
-                </button>
+                <OwnerOnly>
+                  <button
+                    type="button"
+                    className="grid size-11 shrink-0 place-items-center rounded-xl text-bad"
+                    aria-label={`حذف ${member.name}`}
+                    onClick={() => setPending(member.code)}
+                  >
+                    <Trash2 className="size-5" />
+                  </button>
+                </OwnerOnly>
               </li>
             ))}
           </ul>
         )}
       </Card>
-      <Card title="افزودن پرسنل">
-        <form className="flex flex-col gap-3" onSubmit={submit}>
-          <Field label="نام">
-            <input
-              id="s-name"
-              className={fieldClass}
-              placeholder="نام پرسنل"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </Field>
-          <Field label="سمت">
-            <input
-              id="s-role"
-              className={fieldClass}
-              placeholder="تولیدکننده"
-              value={role}
-              onChange={(event) => setRole(event.target.value)}
-            />
-          </Field>
-          <Submit>
-            <Plus className="size-5" />
-            افزودن
-          </Submit>
-        </form>
-      </Card>
+      <OwnerOnly>
+        <Card title="افزودن پرسنل">
+          <form className="flex flex-col gap-3" onSubmit={submit}>
+            <Field label="نام">
+              <input
+                id="s-name"
+                className={fieldClass}
+                placeholder="نام پرسنل"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </Field>
+            <Field label="سمت">
+              <input
+                id="s-role"
+                className={fieldClass}
+                placeholder="تولیدکننده"
+                value={role}
+                onChange={(event) => setRole(event.target.value)}
+              />
+            </Field>
+            <Submit>
+              <Plus className="size-5" />
+              افزودن
+            </Submit>
+          </form>
+        </Card>
+      </OwnerOnly>
       {pending ? (
         <Confirm
           title="حذف پرسنل"
@@ -1017,24 +1038,26 @@ function HistoryPanel() {
                   <p className="font-semibold">
                     {entry.mat} — <span className="tabular-nums">{fmt(entry.qty)}</span>
                   </p>
-                  <div className="flex shrink-0">
-                    <button
-                      type="button"
-                      className="grid size-11 place-items-center rounded-xl text-navy"
-                      aria-label={`ویرایش ورود ${entry.mat}`}
-                      onClick={() => setEditEntry(entry)}
-                    >
-                      <Pencil className="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      className="grid size-11 place-items-center rounded-xl text-bad"
-                      aria-label="حذف ورود"
-                      onClick={() => setPending({ kind: "entry", id: entry.id })}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
+                  <OwnerOnly>
+                    <div className="flex shrink-0">
+                      <button
+                        type="button"
+                        className="grid size-11 place-items-center rounded-xl text-navy"
+                        aria-label={`ویرایش ورود ${entry.mat}`}
+                        onClick={() => setEditEntry(entry)}
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="grid size-11 place-items-center rounded-xl text-bad"
+                        aria-label="حذف ورود"
+                        onClick={() => setPending({ kind: "entry", id: entry.id })}
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  </OwnerOnly>
                 </div>
                 <p className="text-sm text-muted">
                   {entry.date}
@@ -1058,24 +1081,26 @@ function HistoryPanel() {
                   <p className="font-semibold">
                     {row.prod} × <span className="tabular-nums">{fmt(row.qty)}</span>
                   </p>
-                  <div className="flex shrink-0">
-                    <button
-                      type="button"
-                      className="grid size-11 place-items-center rounded-xl text-navy"
-                      aria-label={`ویرایش تولید ${row.prod}`}
-                      onClick={() => setEditProd(row)}
-                    >
-                      <Pencil className="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      className="grid size-11 place-items-center rounded-xl text-bad"
-                      aria-label="حذف تولید"
-                      onClick={() => setPending({ kind: "prod", id: row.id })}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
+                  <OwnerOnly>
+                    <div className="flex shrink-0">
+                      <button
+                        type="button"
+                        className="grid size-11 place-items-center rounded-xl text-navy"
+                        aria-label={`ویرایش تولید ${row.prod}`}
+                        onClick={() => setEditProd(row)}
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="grid size-11 place-items-center rounded-xl text-bad"
+                        aria-label="حذف تولید"
+                        onClick={() => setPending({ kind: "prod", id: row.id })}
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  </OwnerOnly>
                 </div>
                 <p className="text-sm leading-relaxed text-pretty text-muted">
                   {row.date}
@@ -1090,21 +1115,23 @@ function HistoryPanel() {
           </ul>
         )}
       </Card>
-      <button
-        type="button"
-        className="mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-line bg-card text-sm font-semibold text-navy"
-        onClick={() => setPending({ kind: "mehr" })}
-      >
-        بازگردانی ثبت‌های ۱۴ تا ۱۶ مهر
-      </button>
-      <button
-        type="button"
-        className="mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-line bg-card text-sm font-semibold text-bad"
-        onClick={() => setPending({ kind: "clear" })}
-      >
-        <Trash2 className="size-4" />
-        پاک‌کردن همهٔ ثبت‌ها
-      </button>
+      <OwnerOnly>
+        <button
+          type="button"
+          className="mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-line bg-card text-sm font-semibold text-navy"
+          onClick={() => setPending({ kind: "mehr" })}
+        >
+          بازگردانی ثبت‌های ۱۴ تا ۱۶ مهر
+        </button>
+        <button
+          type="button"
+          className="mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-line bg-card text-sm font-semibold text-bad"
+          onClick={() => setPending({ kind: "clear" })}
+        >
+          <Trash2 className="size-4" />
+          پاک‌کردن همهٔ ثبت‌ها
+        </button>
+      </OwnerOnly>
       {pending?.kind === "mehr" ? (
         <Confirm
           title="بازگردانی ثبت‌های مهر"
@@ -1166,6 +1193,36 @@ function HistoryPanel() {
         </Sheet>
       ) : null}
     </>
+  );
+}
+
+/** فقط صاحب (ایمیل مشخص‌شده) محتوا را می‌بیند */
+function OwnerOnly({ children }: { children: ReactNode }) {
+  const user = useCurrentUser();
+  const isOwner =
+    user?.primaryEmail?.toLowerCase() === OWNER_EMAIL.toLowerCase();
+  if (!isOwner) return null;
+  return <>{children}</>;
+}
+
+/** اگر صاحب باشد children را نشان می‌دهد، وگرنه کارت لاگین */
+function OwnerGate({ title, children }: { title: string; children: ReactNode }) {
+  const user = useCurrentUser();
+  const isOwner =
+    user?.primaryEmail?.toLowerCase() === OWNER_EMAIL.toLowerCase();
+  if (isOwner) return <>{children}</>;
+  return <AuthRequiredCard title={title} />;
+}
+
+function AuthRequiredCard({ title }: { title: string }) {
+  return (
+    <Card title={title}>
+      <p className="mb-4 text-sm leading-relaxed text-muted">
+        برای ثبت و ویرایش باید با ایمیل <strong>{OWNER_EMAIL}</strong> وارد شوید.
+        مشاهده موجودی و سوابق برای همه آزاد است.
+      </p>
+      <SignInButtons />
+    </Card>
   );
 }
 
@@ -1290,24 +1347,26 @@ function RowActions({
   onDelete: () => void;
 }) {
   return (
-    <div className="flex shrink-0">
-      <button
-        type="button"
-        className="grid size-11 place-items-center rounded-xl text-navy"
-        aria-label={editLabel}
-        onClick={onEdit}
-      >
-        <Pencil className="size-4" />
-      </button>
-      <button
-        type="button"
-        className="grid size-11 place-items-center rounded-xl text-bad"
-        aria-label={deleteLabel}
-        onClick={onDelete}
-      >
-        <Trash2 className="size-4" />
-      </button>
-    </div>
+    <OwnerOnly>
+      <div className="flex shrink-0">
+        <button
+          type="button"
+          className="grid size-11 place-items-center rounded-xl text-navy"
+          aria-label={editLabel}
+          onClick={onEdit}
+        >
+          <Pencil className="size-4" />
+        </button>
+        <button
+          type="button"
+          className="grid size-11 place-items-center rounded-xl text-bad"
+          aria-label={deleteLabel}
+          onClick={onDelete}
+        >
+          <Trash2 className="size-4" />
+        </button>
+      </div>
+    </OwnerOnly>
   );
 }
 
